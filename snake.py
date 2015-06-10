@@ -34,17 +34,36 @@ class Part(Sprite):
 		self.rect.move_ip(x, y)
 
 class Snake(object):
-	def __init__(self, x, y, velocity, direction):
+	key_map = {
+		pygame.K_UP:    Direction.up,
+		pygame.K_DOWN:  Direction.down,
+		pygame.K_LEFT:  Direction.left,
+		pygame.K_RIGHT: Direction.right
+	}
+
+	def __init__(self, x, y, direction):
 		self.head = Part(x, y)
 		# List of parts must be in order, starting with head
 		self.parts = pygame.sprite.OrderedUpdates([self.head])
-		self.direction = direction
-		self.velocity = velocity
+		self.set_velocity(direction)
+
+	def set_velocity(self, direction):
+		if direction == Direction.up:
+			self.velocity = (0, -VELOCITY)
+		elif direction == Direction.down:
+			self.velocity = (0, VELOCITY)
+		elif direction == Direction.left:
+			self.velocity = (-VELOCITY, 0)
+		elif direction == Direction.right:
+			self.velocity = (VELOCITY, 0)
 
 	def update(self):
 		self.parts.update()
 		for part in self.parts:
-			part.move(self.velocity, self.velocity)
+			part.move(*self.velocity)
+
+	def key_down(self, key):
+		self.set_velocity(Snake.key_map[key])
 
 def main():
 	screen = pygame.display.set_mode(WINDOW_DIMENSIONS)
@@ -54,7 +73,7 @@ def main():
 	screen.blit(background, (0, 0))
 
 	clock = pygame.time.Clock()
-	snake = Snake(START_X, START_Y, VELOCITY, Direction.down)
+	snake = Snake(START_X, START_Y, Direction.down)
 	sprites = pygame.sprite.Group([])
 
 	def end():
@@ -85,6 +104,8 @@ def main():
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				running = False
+			elif event.type == pygame.KEYDOWN and event.key in Snake.key_map:
+				snake.key_down(event.key)
 			elif event.type == pygame.KEYDOWN and event.key in key_map:
 				key_map[event.key]()
 				# print event
