@@ -6,30 +6,45 @@
 
 # Python 2.7.3
 # Pygame 1.9.1 (release)
+# enum34 for Enum
 
 import sys
 import pygame
 from pygame.sprite import Sprite
+from enum import Enum
 
 pygame.init()
 
 WINDOW_DIMENSIONS = (WINDOW_WIDTH, WINDOW_HEIGHT) = 640, 480
+PART_DIMENSIONS = [15, 15]
+START_POS = (START_X, START_Y) = WINDOW_WIDTH/2, WINDOW_HEIGHT/2
+VELOCITY = 3
+
+Direction = Enum('Direction', 'up down left right')
 
 class Part(Sprite):
-	def __init__(self, x, y, velocity_x, velocity_y):
+	def __init__(self, x, y):
 		Sprite.__init__(self)
-		self.image = pygame.Surface([5, 5])
+		self.image = pygame.Surface(PART_DIMENSIONS)
 		self.image.fill(pygame.Color(0, 255, 0, 100)) # Green
 		self.rect = self.image.get_rect()
 		self.rect.center = (x, y)
-		self.velocity_x = velocity_x
-		self.velocity_y = velocity_y
+
+	def move(self, x, y):
+		self.rect.move_ip(x, y)
+
+class Snake(object):
+	def __init__(self, x, y, velocity, direction):
+		self.head = Part(x, y)
+		# List of parts must be in order, starting with head
+		self.parts = pygame.sprite.OrderedUpdates([self.head])
+		self.direction = direction
+		self.velocity = velocity
 
 	def update(self):
-		self.rect.move_ip(self.velocity_x, self.velocity_y)
-
-class Snake(Sprite):
-	pass
+		self.parts.update()
+		for part in self.parts:
+			part.move(self.velocity, self.velocity)
 
 def main():
 	screen = pygame.display.set_mode(WINDOW_DIMENSIONS)
@@ -39,8 +54,8 @@ def main():
 	screen.blit(background, (0, 0))
 
 	clock = pygame.time.Clock()
-	part = Part(10, 10, 1, 1)
-	sprites = pygame.sprite.Group([part])
+	snake = Snake(START_X, START_Y, VELOCITY, Direction.down)
+	sprites = pygame.sprite.Group([])
 
 	def end():
 		sys.exit(0)
@@ -56,9 +71,16 @@ def main():
 		pygame.display.set_caption('Snake :: {0:.2f} fps'.format(clock.get_fps()))
 
 		sprites.update()
+		snake.update()
+		snake.parts.update()
+
 		sprites.draw(screen)
+		snake.parts.draw(screen)
+
 		pygame.display.flip()
+
 		sprites.clear(screen, background)
+		snake.parts.clear(screen, background)
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
