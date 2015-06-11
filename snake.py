@@ -6,29 +6,36 @@
 
 # Python 2.7.3
 # Pygame 1.9.1 (release)
-# enum34 for Enum
+# enum34 for IntEnum
 
 import sys
 import pygame
 from pygame.sprite import Sprite
-from enum import Enum
+from enum import IntEnum
 
 pygame.init()
 
 WINDOW_DIMENSIONS = (WINDOW_WIDTH, WINDOW_HEIGHT) = 640, 480
 PART_DIMENSIONS = [15, 15]
 START_POS = (START_X, START_Y) = WINDOW_WIDTH/2, WINDOW_HEIGHT/2
-VELOCITY = 3
+VELOCITY = 15
 
-Direction = Enum('Direction', 'up down left right')
+class Direction(IntEnum):
+	up    = -1
+	down  = 1
+	left  = -2
+	right = 2
 
 class Part(Sprite):
-	def __init__(self, x, y):
+	topid = 0
+	def __init__(self, x, y, color):
 		Sprite.__init__(self)
 		self.image = pygame.Surface(PART_DIMENSIONS)
-		self.image.fill(pygame.Color(0, 255, 0, 100)) # Green
+		self.image.fill(color) # Green
 		self.rect = self.image.get_rect()
 		self.rect.center = (x, y)
+		self.id = Part.topid
+		Part.topid += 1
 
 	def move(self, x, y):
 		self.rect.move_ip(x, y)
@@ -42,12 +49,20 @@ class Snake(object):
 	}
 
 	def __init__(self, x, y, direction):
-		self.head = Part(x, y)
+		self.head = Part(x, y, pygame.Color(0, 255, 0, 100))
 		# List of parts must be in order, starting with head
 		self.parts = pygame.sprite.OrderedUpdates([self.head])
+		# Testing: Add a few parts
+		for i in range(1, 10):
+			self.parts.add(Part(x, y - (PART_DIMENSIONS[1] * i), pygame.Color(255, 0, 0, 100)))
+		self.direction = direction
 		self.set_velocity(direction)
 
 	def set_velocity(self, direction):
+		# Do not allow changing to the opposite direction
+		if self.direction + direction == 0:
+			return
+		self.direction = direction
 		if direction == Direction.up:
 			self.velocity = (0, -VELOCITY)
 		elif direction == Direction.down:
@@ -58,9 +73,17 @@ class Snake(object):
 			self.velocity = (VELOCITY, 0)
 
 	def update(self):
-		self.parts.update()
+		self.head.move(*self.velocity)
+		previous = self.head
 		for part in self.parts:
-			part.move(*self.velocity)
+			# Head position is updated below
+			if part == self.head:
+				print "head"
+				continue
+			# Set each part to the position of the one in front of it
+			part.rect.center = previous.rect.center
+			print part.id, "move to", previous.id
+			previous = part
 
 	def key_down(self, key):
 		self.set_velocity(Snake.key_map[key])
@@ -91,6 +114,7 @@ def main():
 
 		sprites.update()
 		snake.update()
+		# Unnecessary: Part objects don't have an update method
 		snake.parts.update()
 
 		sprites.draw(screen)
